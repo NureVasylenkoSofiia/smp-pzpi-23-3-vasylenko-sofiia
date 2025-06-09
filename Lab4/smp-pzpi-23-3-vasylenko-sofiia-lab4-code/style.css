@@ -1,0 +1,161 @@
+body {
+    font-family: 'Segoe UI', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f8;
+    color: #333;
+}
+
+header {
+    background-color: #D2B48C;
+    color: white;
+    padding: 20px 0;
+    text-align: center;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 2em;
+}
+
+nav {
+    margin-top: 10px;
+}
+
+nav a {
+    color: white;
+    margin: 0 15px;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+nav a:hover {
+    text-decoration: underline;
+}
+
+main {
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.intro h2 {
+    font-size: 1.8em;
+    margin-bottom: 10px;
+}
+
+.intro p {
+    font-size: 1.1em;
+    margin-bottom: 20px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.button {
+    background-color: #D2B48C;
+    color: white;
+    padding: 12px 25px;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 1em;
+}
+
+.button:hover {
+    background-color: #D2B48C;
+}
+
+footer {
+    background-color: #222;
+    color: white;
+    text-align: center;
+    padding: 15px 0;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    font-size: 0.9em;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+
+th, td {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+}
+
+th {
+    background-color: #f2f2f2;
+}
+
+.profile-wrapper {
+    display: flex;
+    gap: 40px;
+    max-width: 800px;
+    margin: 0 auto;
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    flex-wrap: wrap;
+}
+
+.profile-photo-block {
+    flex: 1;
+    text-align: center;
+}
+
+.profile-photo-large {
+    max-width: 200px;
+    height: auto;
+    border-radius: 50%;
+    border: 3px solid #D2B48C;
+    box-shadow: 0 0 10px rgba(0,0,0,0.15);
+    margin-bottom: 15px;
+}
+
+.profile-photo-placeholder {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background-color: #ccc;
+    line-height: 200px;
+    text-align: center;
+    font-weight: bold;
+    color: white;
+    margin: 0 auto 15px;
+}
+
+.profile-form-block {
+    flex: 2;
+}
+
+.profile-form-block .form-group {
+    margin-bottom: 20px;
+}
+
+.profile-form-block label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: bold;
+}
+
+.profile-form-block input[type="text"],
+.profile-form-block input[type="date"],
+.profile-form-block textarea,
+.profile-form-block input[type="file"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1em;
+    box-sizing: border-box;
+}
+
+.profile-form-block textarea {
+    resize: vertical;
+}
