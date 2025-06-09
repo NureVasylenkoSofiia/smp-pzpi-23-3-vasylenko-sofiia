@@ -62,3 +62,4 @@ for ((i=0; i<snow_width; i++)); do
     printf "*"
 done
 echo
+ GitHub репозиторій: https://github.com/NureVasylenkoSofiia/smp-pzpi-23-3-vasylenko-sofiia/blob/main/Pract1/smp-pzpi-23-3-vasylenko-sofiia-pract1/smp-pzpi-23-3-vasylenko-sofiia-pract1-code/smp-pzpi-23-3-vasylenko-sofiia-pract1-code.sh
