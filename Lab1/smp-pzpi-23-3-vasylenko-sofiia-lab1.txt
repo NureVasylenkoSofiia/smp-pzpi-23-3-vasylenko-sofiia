@@ -1,1 +1,475 @@
+Міністерство освіти і науки України
+Харківський національний університет радіоелектроніки
+
+
+Кафедра Програмної інженерії
+
+
+
+Звіт
+З лабораторної роботи №1
+з дисципліни «Скриптові мови програмування»
+
+
+
+
+
+
+
+
+
+Виконала									     Перевірив
+ст.гр ПЗПІ-23-3							ст. в. Сокорчук І.П.
+Василенко С.О.
+
+
+
+
+
+Харків 2025
+1 ІСТОРІЯ ЗМІН
+№	Дата	Версія звіту	Опис змін та виправлень
+1	08.06.2025	       0.1	Повна реалізація звіту 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+2 ЗАВДАННЯ
+2.1 Мета завдання
+Ознайомитися з базовими командами Bash для обробки файлів і текстової інформації, зокрема з командами select, ls, awk, sort, uniq, tee, cat, sed, iconv та іншими. Навчитися їх практичному застосуванню. Розробити Bash-скрипт, який конвертує розклад занять у форматі CSV у формат, сумісний для імпорту до Google Календаря.
+2.2	 Постановка задачі
+Розробити Bash-скрипт, який обробляє експортований із сайту https://cist.nure.ua/ розклад занять для всіх груп потоку в форматі CSV та перетворює його у формат CSV для завантаження в Google Календар https://support.google.com/.
+Скрипт повинен підтримувати наступні ключі:
+-	«-help» — вивести довідку, завершити роботу та повернути успішний результат у батьківський процес;
+-	«-version» — ввивести інформацію про версію, завершити роботу та повернути успішний результат у батьківський процес;
+-	«-q» або «-quiet» — не виводити інформацію в стандартний потік   виведення.
+   Як параметри скрипт приймає назву академічної групи (шаблон) та експортований CSV файл розкладу занять. Обидва аргументи є опціональними, тобто, якщо вони не передані, то скрипт відображує меню вибору за допомогою команди select, сформувавши відсортовани за датою список доступних CSV-файлів у поточній директорії, що відповідають наступному шаблону:
+     TimeTable_??_??_20??.csv                                                                                 3
+   Після вибору файлу скрипт відкриває його, генерує список академічних груп, сортує їх в алфавітному порядку й виводить меню вибору групи за допомогою select.
+Правила обробки даних у файлі:
+-	Зчитати вхідний CSV-файл та відібрати лише ті рядки, які відповідають вибраній академічній групі.
+-	Пронумерувати кожне заняття: лекції та практичні рахуються як одне заняття, лабораторні як два.
+-	Поле Subject формувати на основі теми заняття, видаливши з неї назву академічної групи та дефіс на початку.
+-	Додати номер заняття у кінець теми після крапки з комою.
+-	Дату та час перетворити у формат Google Calendar — mm/dd/yyyy і   HH:MM AM/PM, тобто у 12-годинному форматі з позначкою AM або PM.
+-	Поле Description заповнити текстом із колонки «Опис (Описание)» CSV-  файлу.
+-	Зібрані дані сформувати у форматі, сумісному з імпортом у GoogleCalendar.
+-	Результат виводити у стандартний потік, якщо не використано прапорець  -q або –quiet.
+-	Зберегти результат у новий файл із наступною назвою, додавши «Google» до основи.
+  Обробка помилок:
+-	Якщо файл не знайдено або недоступний для читання, то вивести
+повідомлення про помилку в стандартний потік помилок і завершити  скрипт з відповідним кодом.
+-	Якщо обрана група не знайдена — повідомити користувача та запропонувати інший вибір.
+-	Якщо група не вказана, але у файлі є лише одна — обробити її автоматично.
+-	У випадку помилок при обробці даних — вивести повідомлення і   завершити роботу з помилковим кодом.
+Додаткові вимоги для скрипта: файл скрипту повинен мати права на виконання для всіх користувачів, але дозволи на редагування лише для власника.
+ 
+3 ОПИС ВИКОНАНОЇ РОБОТИ 
+3.1 Хід роботи
+Функція перевіряє, чи існує файл і чи він читабельний. Якщо файл не відповідає вимогам, скрипт завершує роботу з відповідним кодом помилки.
+
+19  validate_file() {
+20      [[ ! -f "$1" ]] && fail_exit "Файл '$1' не знайдено" $ERR_NO_FILE
+21      [[ ! -r "$1" ]] && fail_exit "Файл '$1' нечитабельний" $ERR_NO_READ
+22  }
+
+Якщо файл не передано, користувачеві пропонується вибрати файл зі списку знайдених у поточному каталозі (файли типу TimeTable_...csv).
+
+50  choose_csv_file() {
+51      local files=($(ls -t | grep -E '^TimeTable_.._.._20..\.csv'))
+52  
+53      [[ ${#files[@]} -eq 0 ]] && fail_exit "CSV-файли не знайдено" $ERR_NO_FILE
+54  
+55      log "Список доступних файлів:"
+56      files+=("ВИХІД")
+57  
+58      select f in "${files[@]}"; do
+59          if [[ "$f" == "ВИХІД" ]]; then
+60              exit 0
+61          elif [[ -n "$f" ]]; then
+62              csv_path="$f"
+63              validate_file "$csv_path"
+64              break
+65          else
+66              log "Невірний вибір. Повторіть спробу."
+67          fi
+68      done
+69  }
+
+Скрипт перетворює файл у UTF-8 та виділяє назви академічних груп (ПЗПІ-XX-X), унікальні та відсортовані
+
+71 extract_groups() {
+72      iconv -f cp1251 -t utf-8 "$1" | sed 's/\r/\n/g' | \
+73      awk 'BEGIN{ FPAT="([^,]*|\"[^\"]*\")" } NR>1 {
+74          if ($1 ~ /ПЗПІ-[0-9]{2}-[0-9]+/) {
+75              match($1, /ПЗПІ-[0-9]{2}-[0-9]+/, m)
+76              if (m[0] != "") print m[0]
+77          }
+78      }' | sort -u
+79  }
+
+Функція перевіряє, чи є введена група серед знайдених у файлі. Якщо ні, показує всі доступні варіанти.
+
+104 verify_group() {
+105     local name="$1"
+106     for g in "${all_groups[@]}"; do
+107         [[ "$g" == "$name" ]] && return 0
+108     done
+109 
+110     log "Група '$name' не знайдена."
+111     for g in "${all_groups[@]}"; do
+112         log "- $g"
+113     done
+114     return 1
+115 }
+
+Основна логіка скрипта: читає CSV, обробляє записи для вибраної групи, конвертує дати/час у формат Google Calendar, нумерує пари одного предмета (Лк, Пз, Лб), формує файл Google_TimeTable_XX_XX_20XX.csv.
+
+117 convert_schedule() {
+118     local dt=$(echo "$csv_path" | grep -o '[0-9]\{2\}_[0-9]\{2\}_20[0-9]\{2\}')
+119     [[ -z "$dt" ]] && fail_exit "Не вдалося визначити дату" $ERR_CONVERT_FAIL
+120 
+121     local out_file="Google_TimeTable_${dt}.csv"
+122     echo "Subject,Start Date,Start Time,End Date,End Time,Description" > "$out_file"
+123 
+124     log "Обробка для: $selected_group"
+125 
+126     if ! iconv -f cp1251 -t utf-8 "$csv_path" | sed 's/\r/\n/g' | awk -v grp="$selected_group" -v only_one="${#all_groups[@]}" '
+127 BEGIN {
+128     FPAT="([^,]*|\"[^\"]*\")"
+129 }
+130 
+131 function clean(s) {
+132     gsub(/^"+|"+$/, "", s)
+133     return s
+134 }
+135 
+136 function date_us(d) {
+137     split(clean(d), a, ".")
+138     return a[2] "/" a[1] "/" a[3]
+139 }
+140 
+141 function time_us(t) {
+142     split(clean(t), p, ":")
+143     h = p[1]+0; m = p[2]
+144     period = (h >= 12) ? "PM" : "AM"
+145     h = (h % 12); if (h == 0) h = 12
+146     return sprintf("%02d:%s %s", h, m, period)
+147 }
+148 
+149 NR > 1 {
+150     if (only_one == 1 || $1 ~ grp) {
+151         subj = clean($1); gsub(/^.* - /, "", subj)
+152 
+153         sdate = date_us($2)
+154         edate = date_us($4)
+155 
+156         stime = time_us($3)
+157         etime = time_us($5)
+158 
+159         desc = clean($12)
+160 
+161         key = subj "|" sdate "|" stime "|" edate "|" etime "|" desc "|" $1
+162         lines[NR] = key
+163     }
+164 }
+165 END {
+166     for (i in lines) print lines[i]
+167 }
+168 ' | sort -t'|' -k2,2 -k3,3 | awk -F'|' '
+169 BEGIN {
+170     delete lecs; delete pracs; delete labs
+171     prev = ""; prev_day = ""; prev_n = 0
+172 }
+173 {
+174     subj = $1; day = $2; start = $3; endd = $4; endt = $5; desc = $6; orig = $7
+175 
+176     name = subj; sub(/ .*/, "", name)
+177 
+178     if (!(name in lecs)) { lecs[name]=0; pracs[name]=0; labs[name]=0 }
+179 
+180     if (subj ~ /Лк/) {
+181         lecs[name]++
+182         subj = subj "; №" lecs[name]
+183     } else if (subj ~ /Пз/) {
+184         pracs[name]++
+185         subj = subj "; №" pracs[name]
+186     } else if (subj ~ /Лб/) {
+187         if (name == prev && day == prev_day) {
+188             subj = subj "; №" prev_n
+189         } else {
+190             labs[name]++
+191             subj = subj "; №" labs[name]
+192             prev_n = labs[name]
+193         }
+194         prev = name; prev_day = day
+195     }
+196 
+197     printf "\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"\n", subj, day, start, endd, endt, desc
+198 }
+199 ' >> "$out_file"; then
+200         fail_exit "Помилка при обробці CSV" $ERR_CONVERT_FAIL
+201     fi
+202 
+203     log "Файл збережено як $out_file"
+204 }
+
+Після успішної обробки скрипт повідомляє ім’я згенерованого файлу.
+ 
+ВИСНОВКИ
+У ході виконання роботи було розроблено Bash-скрипт для автоматизованої обробки розкладу занять академічних груп. Реалізовано зчитування CSV-файлів, фільтрацію за назвою групи та конвертацію даних у формат Google Calendar. Скрипт підтримує інтерфейс командного рядка, обробку помилок і взаємодію з користувачем. Отриманий результат може бути використаний для швидкого імпорту розкладу в особистий календар. Робота сприяла набуттю практичних навичок обробки даних у Bash.
+ 
+ДОДАТОК А
+Відеозапис
+Відеозапис презентації результатів лабораторної роботи: https://youtu.be/d0ww177U1hg
+Хронологічний опис відеозапису:
+00:00 – Представлення
+00:11 – Опис завдання
+01:21 – Тестування 
+02:25 – Розбір коду
+07:30 – Висновки
+ 
+ДОДАТОК В
+Програмний код
+
+ 1  #!/bin/bash
+ 2  
+ 3  SCRIPT_VERSION="1.0"
+ 4  
+ 5  quiet=false
+ 6  selected_group=""
+ 7  csv_path=""
+ 8  
+ 9  ERR_NO_FILE=1
+10  ERR_NO_READ=2
+11  ERR_NO_GROUP=3
+12  ERR_CONVERT_FAIL=4
+13  
+14  fail_exit() {
+15      echo "ПОМИЛКА: $1" >&2
+16      exit "$2"
+17  }
+18  
+19  validate_file() {
+20      [[ ! -f "$1" ]] && fail_exit "Файл '$1' не знайдено" $ERR_NO_FILE
+21      [[ ! -r "$1" ]] && fail_exit "Файл '$1' нечитабельний" $ERR_NO_READ
+22  }
+23  
+24  usage_info() {
+25      cat <<EOF
+26  Синтаксис:
+27    task2 [--help | --version] | [[-q|--quiet] [назва_групи] файл.csv]
+28  
+29  Опції:
+30    --help       Вивід цього повідомлення
+31    --version    Показ версії
+32    -q, --quiet  Приховати повідомлення
+33  
+34  Аргументи:
+35    назва_групи    Назва академічної групи (формат ПЗПІ-XX-X)
+36    файл.csv       Експортований CSV з cist
+37  EOF
+38      exit 0
+39  }
+40  
+41  print_version() {
+42      echo "Версія: $SCRIPT_VERSION"
+43      exit 0
+44  }
+45  
+46  log() {
+47      $quiet || echo "$1"
+48  }
+49  
+50  choose_csv_file() {
+51      local files=($(ls -t | grep -E '^TimeTable_.._.._20..\.csv'))
+52  
+53      [[ ${#files[@]} -eq 0 ]] && fail_exit "CSV-файли не знайдено" $ERR_NO_FILE
+54  
+55      log "Список доступних файлів:"
+56      files+=("ВИХІД")
+57  
+58      select f in "${files[@]}"; do
+59          if [[ "$f" == "ВИХІД" ]]; then
+60              exit 0
+61          elif [[ -n "$f" ]]; then
+62              csv_path="$f"
+63              validate_file "$csv_path"
+64              break
+65          else
+66              log "Невірний вибір. Повторіть спробу."
+67          fi
+68      done
+69  }
+70  
+71  extract_groups() {
+72      iconv -f cp1251 -t utf-8 "$1" | sed 's/\r/\n/g' | \
+73      awk 'BEGIN{ FPAT="([^,]*|\"[^\"]*\")" } NR>1 {
+74          if ($1 ~ /ПЗПІ-[0-9]{2}-[0-9]+/) {
+75              match($1, /ПЗПІ-[0-9]{2}-[0-9]+/, m)
+76              if (m[0] != "") print m[0]
+77          }
+78      }' | sort -u
+79  }
+80  
+81  group_prompt() {
+82      log "Групи у файлі $csv_path:"
+83      log "Знайдено ${#all_groups[@]} груп"
+84  
+85      if [[ ${#all_groups[@]} -eq 1 ]]; then
+86          selected_group="${all_groups[0]}"
+87          log "Автовибір: $selected_group"
+88      else
+89          all_groups+=("ВИХІД")
+90          select g in "${all_groups[@]}"; do
+91              if [[ "$g" == "ВИХІД" ]]; then
+92                  exit 0
+93              elif [[ -n "$g" ]]; then
+94                  selected_group="$g"
+95                  log "Вибрано: $selected_group"
+96                  break
+97              else
+98                  log "Невірний ввід. Спробуйте знову."
+99              fi
+100         done
+101     fi
+102 }
+103 
+104 verify_group() {
+105     local name="$1"
+106     for g in "${all_groups[@]}"; do
+107         [[ "$g" == "$name" ]] && return 0
+108     done
+109 
+110     log "Група '$name' не знайдена."
+111     for g in "${all_groups[@]}"; do
+112         log "- $g"
+113     done
+114     return 1
+115 }
+116 
+117 convert_schedule() {
+118     local dt=$(echo "$csv_path" | grep -o '[0-9]\{2\}_[0-9]\{2\}_20[0-9]\{2\}')
+119     [[ -z "$dt" ]] && fail_exit "Не вдалося визначити дату" $ERR_CONVERT_FAIL
+120 
+121     local out_file="Google_TimeTable_${dt}.csv"
+122     echo "Subject,Start Date,Start Time,End Date,End Time,Description" > "$out_file"
+123 
+124     log "Обробка для: $selected_group"
+125 
+126     if ! iconv -f cp1251 -t utf-8 "$csv_path" | sed 's/\r/\n/g' | awk -v grp="$selected_group" -v only_one="${#all_groups[@]}" '
+127 BEGIN {
+128     FPAT="([^,]*|\"[^\"]*\")"
+129 }
+130 
+131 function clean(s) {
+132     gsub(/^"+|"+$/, "", s)
+133     return s
+134 }
+135 
+136 function date_us(d) {
+137     split(clean(d), a, ".")
+138     return a[2] "/" a[1] "/" a[3]
+139 }
+140 
+141 function time_us(t) {
+142     split(clean(t), p, ":")
+143     h = p[1]+0; m = p[2]
+144     period = (h >= 12) ? "PM" : "AM"
+145     h = (h % 12); if (h == 0) h = 12
+146     return sprintf("%02d:%s %s", h, m, period)
+147 }
+148 
+149 NR > 1 {
+150     if (only_one == 1 || $1 ~ grp) {
+151         subj = clean($1); gsub(/^.* - /, "", subj)
+152 
+153         sdate = date_us($2)
+154         edate = date_us($4)
+155 
+156         stime = time_us($3)
+157         etime = time_us($5)
+158 
+159         desc = clean($12)
+160 
+161         key = subj "|" sdate "|" stime "|" edate "|" etime "|" desc "|" $1
+162         lines[NR] = key
+163     }
+164 }
+165 END {
+166     for (i in lines) print lines[i]
+167 }
+168 ' | sort -t'|' -k2,2 -k3,3 | awk -F'|' '
+169 BEGIN {
+170     delete lecs; delete pracs; delete labs
+171     prev = ""; prev_day = ""; prev_n = 0
+172 }
+173 {
+174     subj = $1; day = $2; start = $3; endd = $4; endt = $5; desc = $6; orig = $7
+175 
+176     name = subj; sub(/ .*/, "", name)
+177 
+178     if (!(name in lecs)) { lecs[name]=0; pracs[name]=0; labs[name]=0 }
+179 
+180     if (subj ~ /Лк/) {
+181         lecs[name]++
+182         subj = subj "; №" lecs[name]
+183     } else if (subj ~ /Пз/) {
+184         pracs[name]++
+185         subj = subj "; №" pracs[name]
+186     } else if (subj ~ /Лб/) {
+187         if (name == prev && day == prev_day) {
+188             subj = subj "; №" prev_n
+189         } else {
+190             labs[name]++
+191             subj = subj "; №" labs[name]
+192             prev_n = labs[name]
+193         }
+194         prev = name; prev_day = day
+195     }
+196 
+197     printf "\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"\n", subj, day, start, endd, endt, desc
+198 }
+199 ' >> "$out_file"; then
+200         fail_exit "Помилка при обробці CSV" $ERR_CONVERT_FAIL
+201     fi
+202 
+203     log "Файл збережено як $out_file"
+204 }
+205 
+206 # --- Аргументи командного рядка ---
+207 while [[ $# -gt 0 ]]; do
+208     case "$1" in
+209         --help) usage_info ;;
+210         --version) print_version ;;
+211         -q|--quiet) quiet=true; shift ;;
+212         *)
+213             [[ -z "$csv_path" && -f "$1" ]] && csv_path="$1"
+214             [[ -z "$selected_group" && "$1" =~ ^ПЗПІ-[0-9]{2}-[0-9]+$ ]] && selected_group="$1"
+215             shift ;;
+216     esac
+217 done
+218 
+219 [[ -z "$csv_path" ]] && choose_csv_file || validate_file "$csv_path"
+220 mapfile -t all_groups < <(extract_groups "$csv_path")
+221 [[ ${#all_groups[@]} -eq 0 ]] && fail_exit "Групи не знайдені" $ERR_NO_GROUP
+222 
+223 [[ -n "$selected_group" ]] && ! verify_group "$selected_group" && group_prompt
+224 [[ -z "$selected_group" ]] && group_prompt
+225 
+226 log "Група: $selected_group"
+227 convert_schedule
 
