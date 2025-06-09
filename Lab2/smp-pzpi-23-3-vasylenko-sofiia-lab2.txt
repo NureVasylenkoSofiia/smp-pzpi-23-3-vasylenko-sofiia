@@ -242,7 +242,7 @@
  
 ДОДАТОК В
 Програмний код
-
+ GitHub репозиторій: https://github.com/NureVasylenkoSofiia/smp-pzpi-23-3-vasylenko-sofiia/blob/main/Lab2/smp-pzpi-23-3-vasylenko-sofiia-lab2/smp-pzpi-23-3-vasylenko-sofiia-lab2-code/smp-pzpi-23-3-vasylenko-sofiia-lab2-code.php
  1  <?php
  2  
  3  // Масив товарів
