@@ -244,7 +244,7 @@
  
 ДОДАТОК В
 Програмний код
-
+ GitHub репозиторій: https://github.com/NureVasylenkoSofiia/smp-pzpi-23-3-vasylenko-sofiia/blob/main/Lab1/smp-pzpi-23-3-vasylenko-sofiia-lab1/smp-pzpi-23-3-vasylenko-sofiia-lab1-code/smp-pzpi-23-3-vasylenko-sofiia-code.sh
  1  #!/bin/bash
  2  
  3  SCRIPT_VERSION="1.0"
